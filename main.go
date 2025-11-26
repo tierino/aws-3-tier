@@ -29,7 +29,7 @@ func main() {
 		},
 	})
 
-	dbStack := stacks.NewDataStack(app, "DataStack", &stacks.DataStackProps{
+	dataStack := stacks.NewDataStack(app, "DataStack", &stacks.DataStackProps{
 		StackProps: awscdk.StackProps{
 			Env: env(),
 		},
@@ -40,9 +40,11 @@ func main() {
 		StackProps: awscdk.StackProps{
 			Env: env(),
 		},
-		Vpc:             vpcStack.Vpc,
-		DbSecurityGroup: dbStack.DbSecurityGroup,
-		Repo:            containerRegistryStack.Repo,
+		DbSecurityGroupId:    dataStack.DbSecurityGroupId,
+		CacheSecurityGroupId: dataStack.CacheSecurityGroupId,
+		DbClusterSecretName:  dataStack.DbClusterSecretName,
+		Repo:                 containerRegistryStack.Repo,
+		Vpc:                  vpcStack.Vpc,
 	})
 
 	stacks.NewFrontendStack(app, "FrontendStack", &stacks.FrontendStackProps{

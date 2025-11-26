@@ -3,24 +3,23 @@ package main
 import (
 	"log"
 	"net/http"
+	"server/db"
+	"server/routes"
 )
 
 func main() {
-	// Initialize database connection
-	if err := initDB(); err != nil {
+	if err := db.Init(); err != nil {
 		log.Printf("Warning: Database initialization failed: %v", err)
 		log.Println("Server will start but database operations may fail")
 	}
-	defer closeDB()
+	defer db.Close()
 
-	// Health check endpoint (must stay as-is)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
 
-	// Messages API endpoints
-	http.HandleFunc("/api/messages", messagesHandler)
+	http.HandleFunc("/api/messages", routes.MessagesHandler)
 
 	log.Println("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

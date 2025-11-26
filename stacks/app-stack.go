@@ -15,9 +15,11 @@ import (
 
 type AppStackProps struct {
 	awscdk.StackProps
-	Vpc             awsec2.Vpc
-	DbSecurityGroup awsec2.SecurityGroup
-	Repo            awsecr.Repository
+	DbSecurityGroupId    *string
+	CacheSecurityGroupId *string
+	DbClusterSecretName  *string
+	Repo                 awsecr.Repository
+	Vpc                  awsec2.Vpc
 }
 
 type AppStack struct {
@@ -81,11 +83,34 @@ func NewAppStack(scope constructs.Construct, id string, props *AppStackProps) *A
 		B(false),
 	)
 
+	// Pull security group from ID so as to not create a circular stack dependency
+	dbSecurityGroup := awsec2.SecurityGroup_FromSecurityGroupId(
+		stack,
+		S("DbSecurityGroup"),
+		props.DbSecurityGroupId,
+		&awsec2.SecurityGroupImportOptions{},
+	)
+
 	// Allow EC2 instances to connect to Aurora
-	props.DbSecurityGroup.AddIngressRule(
+	dbSecurityGroup.AddIngressRule(
 		ec2SecurityGroup,
 		awsec2.Port_Tcp(N(5432)),
 		S("Allow PostgreSQL from EC2 instances"),
+		B(false),
+	)
+
+	cacheSecurityGroup := awsec2.SecurityGroup_FromSecurityGroupId(
+		stack,
+		S("CacheSecurityGroup"),
+		props.CacheSecurityGroupId,
+		&awsec2.SecurityGroupImportOptions{},
+	)
+
+	// Allow EC2 instances to connect to Memcached
+	cacheSecurityGroup.AddIngressRule(
+		ec2SecurityGroup,
+		awsec2.Port_Tcp(N(11211)),
+		S("Allow Memcached from EC2 instances"),
 		B(false),
 	)
 
@@ -100,6 +125,7 @@ func NewAppStack(scope constructs.Construct, id string, props *AppStackProps) *A
 		S(fmt.Sprintf("REGION=%s", *stack.Region())),
 		S(fmt.Sprintf("ACCOUNT=%s", *stack.Account())),
 		S(fmt.Sprintf("REPO=%s", *props.Repo.RepositoryUri())),
+		S(fmt.Sprintf("DB_SECRET_NAME=%s", *props.DbClusterSecretName)),
 		S(userDataScript),
 	)
 
