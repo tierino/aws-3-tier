@@ -37,16 +37,11 @@ func NewDataStack(scope constructs.Construct, id string, props *DataStackProps) 
 		Engine: awsrds.DatabaseClusterEngine_AuroraPostgres(&awsrds.AuroraPostgresClusterEngineProps{
 			Version: awsrds.AuroraPostgresEngineVersion_VER_17_5(),
 		}),
-		Credentials: awsrds.Credentials_FromGeneratedSecret(S("dbuser"), &awsrds.CredentialsBaseOptions{}),
-		Writer: awsrds.ClusterInstance_Provisioned(S("Writer"), &awsrds.ProvisionedClusterInstanceProps{
-			InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_BURSTABLE3, awsec2.InstanceSize_MEDIUM),
-		}),
-		Readers: &[]awsrds.IClusterInstance{
-			awsrds.ClusterInstance_Provisioned(S("Reader"), &awsrds.ProvisionedClusterInstanceProps{
-				InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_BURSTABLE3, awsec2.InstanceSize_MEDIUM),
-			}),
-		},
-		Vpc: props.Vpc,
+		Credentials:             awsrds.Credentials_FromGeneratedSecret(S("dbuser"), &awsrds.CredentialsBaseOptions{}),
+		Writer:                  awsrds.ClusterInstance_ServerlessV2(S("Writer"), &awsrds.ServerlessV2ClusterInstanceProps{}),
+		ServerlessV2MinCapacity: N(0),
+		ServerlessV2MaxCapacity: N(2),
+		Vpc:                     props.Vpc,
 		VpcSubnets: &awsec2.SubnetSelection{
 			SubnetType: awsec2.SubnetType_PRIVATE_ISOLATED,
 		},
