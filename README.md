@@ -52,34 +52,18 @@ cdk bootstrap aws://<ACCOUNT-ID>/ap-southeast-2
 cdk synth
 ```
 
-5. Deploy the stack:
+5. Firstly, deploy the `ContainerRegistryStack`:
 
 ```bash
-cdk deploy
+cdk deploy ContainerRegistryStack
 ```
 
-## Deploying the static site
+6. Build and push the app server image to ECR:
 
 ```bash
-# Get the bucket name from outputs (WebsiteBucketName)
-BUCKET_NAME="<WebsiteBucketName from outputs>"
+cd app
 
-# Upload website files to S3
-aws s3 sync website/ s3://$BUCKET_NAME/ --delete
-
-# Verify upload
-aws s3 ls s3://$BUCKET_NAME/
-```
-
-After this, you should be able to see the front end by navigating to the `CloudFrontUrl` from outputs.
-
-## Making app server changes
-
-```bash
-# Build the app
-go build .
-
-# Build the Docker image
+# Build the image
 docker build -t <AppName> .
 
 # Tag the deployment
@@ -89,17 +73,39 @@ docker tag <AppName>:latest <ECRRepositoryUri from outputs>
 aws ecr get-login-password --region ap-southeast-2 \
   | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.ap-southeast-2.amazonaws.com
 
-# Push the image to ECR
+# Push to ECR
 docker push <ECRRepositoryUri from outputs>:latest
 ```
 
-After this you'll need to perform an instance refresh on the Auto Scaling group to update the instances.
+7. Deploy the rest of the infrastructure:
+
+```bash
+cdk deploy --all
+```
+
+You'll be able to see the front end by navigating to the `CloudFrontUrl` from the outputs.
+
+## Making app server changes
+
+After making code changes in `/app`, build, tag and push the image to ECR (step 6), and perform an instance refresh on the Auto Scaling group:
 
 ```bash
 aws autoscaling start-instance-refresh --auto-scaling-group-name <AutoScalingGroupName from outputs>
 ```
 
 ## Making front end changes
+
+1. Update the bucket contents:
+
+```bash
+# Get the bucket name from outputs (WebsiteBucketName)
+BUCKET_NAME="<WebsiteBucketName from outputs>"
+
+# Upload website files to S3
+aws s3 sync website/ s3://$BUCKET_NAME/ --delete
+```
+
+2. Invalidate the distribution cache:
 
 ```bash
 aws cloudfront create-invalidation --distribution-id <DistributionId> --paths "/*"
